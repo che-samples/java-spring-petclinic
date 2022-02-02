@@ -23,13 +23,14 @@ components:
   - name: m2
     volume:
       size: 1G
-  
+
   - name: mysql
     container:
-      image: quay.io/eclipse/che--centos--mysql-57-centos7:latest-e08ee4d43b7356607685b69bde6335e27cf20c020f345b6c6c59400183882764
+      # copy of mysql:5.7.36
+      image: quay.io/vgulyy/che--mysql:5.7.36
       memoryLimit: 300Mi
       endpoints:
-        - exposure: none
+        - exposure: internal
           name: db
           protocol: tcp
           targetPort: 3306
@@ -41,7 +42,9 @@ components:
         - name: MYSQL_DATABASE
           value: petclinic
         - name: PS1
-          value: $(echo ${0})\\$
+          value: $(echo ${0}) $
+        - name: MYSQL_ALLOW_EMPTY_PASSWORD
+          value: allow
 
 commands:
   - id: prepare-database
@@ -49,10 +52,10 @@ commands:
       component: mysql
       workingDir: ${PROJECTS_ROOT}/java-spring-petclinic
       commandLine: |
-        /opt/rh/rh-mysql57/root/usr/bin/mysql -u root < ${PROJECTS_ROOT}/java-spring-petclinic/src/main/resources/db/mysql/user.sql && \
-        /opt/rh/rh-mysql57/root/usr/bin/mysql -u root petclinic < ${PROJECTS_ROOT}/java-spring-petclinic/src/main/resources/db/mysql/schema.sql && \
-        /opt/rh/rh-mysql57/root/usr/bin/mysql -u root petclinic < ${PROJECTS_ROOT}/java-spring-petclinic/src/main/resources/db/mysql/data.sql && \
-        echo -e "\e[32mDone.\e[0m Database petclinic was configured"
+        mysql -u root < ${PROJECTS_ROOT}/java-spring-petclinic/src/main/resources/db/mysql/user.sql && \
+        mysql -u root petclinic < ${PROJECTS_ROOT}/java-spring-petclinic/src/main/resources/db/mysql/schema.sql && \
+        mysql -u root petclinic < ${PROJECTS_ROOT}/java-spring-petclinic/src/main/resources/db/mysql/data.sql && \
+        echo "\e[32mDone.\e[0m Database petclinic was configured"
       group:
         kind: run
         isDefault: true
@@ -81,7 +84,7 @@ commands:
       component: tools
       workingDir: ${PROJECTS_ROOT}/java-spring-petclinic
       commandLine: |
-        java -jar -Dspring-boot.run.profiles=mysql \
+        java -jar -Dspring.profiles.active=mysql \
         -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005 \
         target/*.jar
       group:
